@@ -40,7 +40,7 @@ spark = spark_conf()
 def write_df_to_mysql(df, tablename):
     mysql_user = os.environ.get('MYSQL_USER')
     mysql_pwd = os.environ.get('MYSQL_PWD')
-    df.write.format('jdbc'.options(
+    df.write.format('jdbc').options(
         url='jdbc:mysql://10.0.0.6/spectralize',
         driver='com.mysql.jdbc.Driver',
         dbtable=tablename,
@@ -167,7 +167,7 @@ def read_audio_files():
     # Additional run to 
     #df_audio_data = spark.createDataFrame(file_audio_data)
     #process_df(df_audio_data)
-        
+
 
 if __name__ == '__main__':
     time_seq.append(['start', time.time()])
