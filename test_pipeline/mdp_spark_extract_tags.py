@@ -5,9 +5,8 @@ from pyspark import SparkConf
 from pyspark import SparkContext
 #from pyspark.ml import Pipeline
 #from pyspark.ml.feature import RegexTokenizer, NGram, HasingTF, MinHashLSH
-
 import boto3
-from mp3_tagger import MP3File, VERSION_1, VERSION_2, VERSION_BOTH
+from tinytag import TinyTag as tt
 from io import BytesIO
 import os
 import sys
@@ -29,7 +28,9 @@ spark = spark_conf()
 
 
 
-
+# DataFrame schema
+File_Tags = Row("s3_key", "album", "albumartist", "artist", "audio_offset", "bitrate", "channels", "comment", "composer", "disc", "disc_total", "duration", "filesize", "genre", "samplerate", "title", "track", "track_total", "year")
+file_tags_seq = []
 
 
 
@@ -39,7 +40,7 @@ number_of_files = 0
 s3 = boto3.resource('s3')
 bucket = s3.Bucket(s3_bucket)
 number_of_files=0
-file_limit=50
+file_limit=100
 
 
 #read each file from S3 bucket    
@@ -58,10 +59,11 @@ for obj in bucket.objects.all():
     if "mp3" in s3_key:
         local_path = './local_file.mp3'
         bucket.download_file(s3_key, local_path)
-        mp3 = MP3File(local_path)
+        #mp3 = MP3File(local_path)
             
         try:
-            tags = mp3.get_tags()
+            #tags = mp3.get_tags()
+            tags = tt.get(local_path)
             print(tags)
         except:
             print("invalid file metadata")
