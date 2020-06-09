@@ -22,8 +22,8 @@ time_seq = []
 #####
 
 # create local Spark instance (for non-cluster dev)
-sc = SparkContext('local')
-spark = SparkSession (sc)
+#sc = SparkContext('local')
+#spark = SparkSession (sc)
 
 # define Spark config
 def spark_conf():
