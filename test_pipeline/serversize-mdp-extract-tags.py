@@ -22,8 +22,8 @@ time_seq = []
 #####
 
 # create local Spark instance (for non-cluster dev)
-#sc = SparkContext('local')
-#spark = SparkSession (sc)
+sc = SparkContext('local')
+spark = SparkSession (sc)
 
 # define Spark config
 def spark_conf():
@@ -38,14 +38,24 @@ spark = spark_conf()
 
 # Function to write spark-dataframe to mySQL
 def write_df_to_mysql(df, tablename):
-    mysql_user = os.environ.get('MYSQL_USER')
-    mysql_pwd = os.environ.get('MYSQL_PWD')
-    df.write.format('jdbc').options(
+    # mysql_user = os.environ.get('MYSQL_USER')
+    # mysql_pwd = os.environ.get('MYSQL_PWD')
+    # df.write.format('jdbc').options(
+    #     url='jdbc:mysql://10.0.0.6/spectralize',
+    #     driver='com.mysql.jdbc.Driver',
+    #     dbtable=tablename,
+    #     user=mysql_user,
+    #     password=mysql_pwd).mode('append').save()
+    
+        mysql_user = os.environ.get('MYSQL_USER')
+        mysql_pwd = os.environ.get('MYSQL_PWD')
+        df.write.format('jdbc').options(
         url='jdbc:mysql://10.0.0.6/spectralize',
         driver='com.mysql.jdbc.Driver',
         dbtable=tablename,
         user=mysql_user,
-        password=mysql_pwd).mode('append').save()
+        password=mysql_pwd,
+        mode='append').save()
     
     # with SSHTunnelForwarder(
     #         (ssh_host, ssh_port),
@@ -161,7 +171,7 @@ def read_audio_files():
             break
     
     time_seq.append(['end read-file', time.time()])
-    df_file_tags = spark.createDataFrame(tag_seq)
+    df_file_tags = spark.createDataFrame(tag_seq, schema=File_Tags)
     #display(df_file_tags)
     write_df_to_mysql(df_file_tags, 'metadata')
     # Additional run to 
