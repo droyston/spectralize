@@ -54,8 +54,7 @@ def write_df_to_mysql(df, tablename):
         driver='com.mysql.jdbc.Driver',
         dbtable=tablename,
         user=mysql_user,
-        password=mysql_pwd,
-        mode='append').save()
+        password=mysql_pwd).mode('append').save()
     
     # with SSHTunnelForwarder(
     #         (ssh_host, ssh_port),
