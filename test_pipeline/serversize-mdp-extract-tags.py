@@ -24,12 +24,14 @@ time_seq = []
 # create local Spark instance (for non-cluster dev)
 #sc = SparkContext('local')
 #spark = SparkSession (sc)
+#spark.builder.config('spark.jars', '/usr/local/spark/jars/postgresql-42.2.13.jar')
 
 # define Spark config
 def spark_conf():
  	conf = SparkConf().setAppName("extract_mp3_tags")
  	sc = SparkContext(conf=conf)
  	spark = SparkSession.builder.getOrCreate()
+     spark.builder.config('spark.jars', '/usr/local/spark/jars/postgresql-42.2.13.jar')
  	return spark
  	
 spark = spark_conf()
@@ -47,31 +49,20 @@ def write_df_to_mysql(df, tablename):
     #     user=mysql_user,
     #     password=mysql_pwd).mode('append').save()
     
-        mysql_user = os.environ.get('MYSQL_USER')
-        mysql_pwd = os.environ.get('MYSQL_PWD')
-        df.write.format('jdbc').options(
-        url='jdbc:mysql://10.0.0.6/spectralize',
-        driver='com.mysql.jdbc.Driver',
-        dbtable=tablename,
-        user=mysql_user,
-        password=mysql_pwd).mode('append').save()
     
-    # with SSHTunnelForwarder(
-    #         (ssh_host, ssh_port),
-    #         ssh_username=ssh_user,
-    #         ssh_pkey=mypkey,
-    #         remote_bind_address=(sql_hostname, sql_port)) as tunnel:
+        psql_user = os.environ.get('PSQL_USR')
+        psql_pwd = os.environ.get('PSQL_PW')
 
-    #     conn = pymysql.connect(host='127.0.0.1', user=sql_username,
-    #            passwd=sql_password, db=sql_main_database,
-    #            port=tunnel.local_bind_port)
+        tablename='metadata'
 
-    #     print('inserting: %s, %s' % (callsign, alt))
-    #     query = 'INSERT INTO planes (callsign, alt) VALUES (%s, %s)'
-    #     cursor = conn.cursor()
-    #     cursor.execute(query, (callsign, alt))
-    #     conn.commit()
-    #     conn.close()
+        df_file_tags.write.format('jdbc').options(
+        url='jdbc:postgresql://localhost',
+        driver='org.postgresql.Driver',
+        #driver='com.postgresql.jdbc.Driver',
+        dbtable=tablename,
+        user=psql_user,
+        password=psql_pwd).mode('append').save()
+    
 
 #####
 
@@ -147,17 +138,6 @@ def read_audio_files():
             #print(indiv_tag_list)
             #print( )
             
-            # append current file data to DataFrame
-            # tag_seq.append(File_Tags(indiv_tag_list[0], indiv_tag_list[1],
-            #                          indiv_tag_list[2], indiv_tag_list[3],
-            #                          indiv_tag_list[4], indiv_tag_list[5],
-            #                          indiv_tag_list[6], indiv_tag_list[7],
-            #                          indiv_tag_list[8], indiv_tag_list[9],
-            #                          indiv_tag_list[10], indiv_tag_list[11],
-            #                          indiv_tag_list[12], indiv_tag_list[13],
-            #                          indiv_tag_list[14], indiv_tag_list[15],
-            #                          indiv_tag_list[16], indiv_tag_list[17],
-            #                          indiv_tag_list[18]))
             
             tag_seq.append(indiv_tag_list)
             

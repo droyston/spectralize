@@ -51,7 +51,7 @@ spark.conf.set("spark.sql.execution.arrow.enabled", "true")
 #  	return spark
  	
 # spark = spark_conf()
-spark.conf.set("spark.sql.execution.arrow.enabled", "true")
+#spark.conf.set("spark.sql.execution.arrow.enabled", "true")
 
 
 #####
@@ -82,8 +82,8 @@ librosa.display.specshow(log_S, sr=sr, x_axis='time', y_axis='mel')
 #dff = map(lambda x: (int(x[0]), Vectors.dense(x[1:])), df)
 #mydf = spark.createDataFrame(dff,schema=["label", "features"])
 
-df = y
-dff = map(lambda x: (Vectors.dense(x)),  df)
+#df = y
+#dff = map(lambda x: (Vectors.dense(x)),  df)
 
 df = DenseVector(y)
 #_infer_schema((df, ))
@@ -96,17 +96,26 @@ mydf2 = spark.createDataFrame(pdf, schema=["intensity"])
 #mydf = spark.createDataFrame((pdf, ),schema=["intensity"])
 
 
-mysql_user = os.environ.get('MYSQL_USER')
-mysql_pwd = os.environ.get('MYSQL_PWD')
+psql_user = os.environ.get('PSQL_USR')
+psql_pwd = os.environ.get('PSQL_PW')
+
 
 tablename='raw_audio'
-mydf2.write.format('jdbc').options(
-url='jdbc:postgresql://127.0.0.1/spectralize',
-driver='com.mysql.jdbc.Driver',
-dbtable=tablename,
-user=mysql_user,
-password=mysql_pwd).mode('append').save()
 
+mydf2.write.format('jdbc').options(
+url='jdbc:postgresql://127.0.0.1',
+#driver='org.postgresql.Driver',
+#driver='com.postgresql.jdbc.Driver',
+dbtable=tablename,
+user=psql_user,
+password=psql_pwd).mode('append').save()
+
+# mydf2.write.format('jdbc').options(
+# url='jdbc:postgresql://127.0.0.1',
+# driver='com.mysql.jdbc.Driver',
+# dbtable=tablename,
+# user=psql_user,
+# password=psql_pwd).mode('append').save()
 
 
 
