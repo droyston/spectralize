@@ -31,7 +31,6 @@ def spark_conf():
  	conf = SparkConf().setAppName("extract_mp3_tags")
  	sc = SparkContext(conf=conf)
  	spark = SparkSession.builder.getOrCreate()
-     spark.builder.config('spark.jars', '/usr/local/spark/jars/postgresql-42.2.13.jar')
  	return spark
  	
 spark = spark_conf()
@@ -51,13 +50,13 @@ def write_df_to_mysql(df, tablename):
     
     
         psql_user = os.environ.get('PSQL_USR')
-        psql_pwd = os.environ.get('PSQL_PW')
+        psql_pwd = os.environ.get('PSQL_PWD')
 
-        tablename='metadata'
+        tablename='metadata1'
 
-        df_file_tags.write.format('jdbc').options(
-        url='jdbc:postgresql://localhost',
-        driver='org.postgresql.Driver',
+        df.write.format('jdbc').options(
+        url='jdbc:postgresql://10.0.0.6:5432/spectralize',
+        #driver='org.postgresql.Driver',
         #driver='com.postgresql.jdbc.Driver',
         dbtable=tablename,
         user=psql_user,
