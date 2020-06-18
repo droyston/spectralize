@@ -9,12 +9,12 @@ Created on Wed Jun 17 16:12:56 2020
 # import/configure packages
 import numpy as np
 import pandas as pd
-import pyarrow as pa
+#import pyarrow as pa
 import librosa
 import librosa.display
 from pathlib import Path
 #import Ipython.display as ipd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from pyspark.sql import *
 import pyspark.sql.functions as f
 from pyspark import SparkConf
@@ -22,10 +22,10 @@ from pyspark import SparkContext
 import boto3
 from tinytag import TinyTag as tt
 
-from pyspark.ml.linalg import Vectors
-from pyspark.ml.linalg import DenseVector
-from pyspark.ml.linalg import DenseMatrix
-from pyspark.sql.types import _infer_schema
+#from pyspark.ml.linalg import Vectors
+#from pyspark.ml.linalg import DenseVector
+#from pyspark.ml.linalg import DenseMatrix
+#from pyspark.sql.types import _infer_schema
 
 #from io import BytesIO
 import os
