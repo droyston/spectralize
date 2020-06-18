@@ -40,20 +40,20 @@ time_seq = []
 #####
 
 # create local Spark instance (for non-cluster dev)
-sc = SparkContext('local')
-spark = SparkSession (sc)
-spark.conf.set("spark.sql.execution.arrow.enabled", "true")
+# sc = SparkContext('local')
+# spark = SparkSession (sc)
+# spark.conf.set("spark.sql.execution.arrow.enabled", "true")
 
 
 # define Spark config
-# def spark_conf():
-#  	conf = SparkConf().setAppName("decompress_audio_files")
-#  	sc = SparkContext(conf=conf)
-#  	spark = SparkSession.builder.getOrCreate()
-#  	return spark
+def spark_conf():
+ 	conf = SparkConf().setAppName("decompress_audio_files")
+ 	sc = SparkContext(conf=conf)
+ 	spark = SparkSession.builder.getOrCreate()
+ 	return spark
  	
-# spark = spark_conf()
-# spark.conf.set("spark.sql.execution.arrow.enabled", "true")
+spark = spark_conf()
+spark.conf.set("spark.sql.execution.arrow.enabled", "true")
 
 #####
 
@@ -67,7 +67,8 @@ def write_df_to_psql(df, tablename):
         url='jdbc:postgresql://10.0.0.6:5432/spectralize',
         dbtable=tablename,
         user=psql_user,
-        password=psql_pwd).mode('append').save()
+        #password=psql_pwd).mode('append').save()
+        password=psql_pwd).save()
     
 
 #####
@@ -85,13 +86,14 @@ def read_audio_files():
                 "disc", "disc_total", "duration", "filesize", "genre",
                 "samplerate", "title", "track", "track_total", "year")
     
-    Audio_Tags = ['song_id', 'timeseries', 'intensity']
     
     spec_labels = []
     for sn in range(0,128):
         spec_labels.append('spec' + str(sn+1)) 
         
-    Spec_Tags = Row(spec_labels)
+    spec_df_labels = ['song_id','timeseries'] + spec_labels
+
+    Spec_Tags = Row(spec_df_labels)
     
     # configure S3 access
     s3_bucket = 'mdp-spectralize-pal'
@@ -99,12 +101,8 @@ def read_audio_files():
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(s3_bucket)
     number_of_files=0
-    file_limit=10
+    file_limit=100
     #local_path = './local_file.'
-
-    tag_seq = []
-    audio_seq = []
-    spec_seq = []
     
     known_ext = [".mp3", ".wav", ".m4a"]
     
@@ -118,6 +116,8 @@ def read_audio_files():
         #if "mp3" in s3_key:
         if any(ext in s3_key for ext in known_ext):
             
+            print(number_of_files)
+                
             ext = s3_key[-4:]
             local_path = './localfile' + ext
             
@@ -139,8 +139,13 @@ def read_audio_files():
             indiv_tag_list = list(indiv_tags)
             indiv_tag_list = [str(i) for i in indiv_tag_list]
             
+            tag_seq=[]
             tag_seq.append(indiv_tag_list)
             
+            tags_pdf = pd.DataFrame(data=tag_seq)
+            
+            tag_df = spark.createDataFrame(tags_pdf, schema=File_Tags)
+                        
             
             
             ##### audio
@@ -169,20 +174,41 @@ def read_audio_files():
             audio_pdf = pd.DataFrame(data = full_audio)
             
             audio_df = spark.createDataFrame(audio_pdf)
+                        
             
-            #audio_seq.append(audio_pdf)
+            
+            
             
             ##### spectral
             S = librosa.feature.melspectrogram(y, sr=sr, n_mels=128)
             log_S = librosa.power_to_db(S, ref=np.max)
             log_S = log_S.transpose()
             
+            # song_id defined as "repeat(number_of_files)"
+            song_num = pd.Series([number_of_files])
+            num_points = len(S.transpose())
+            song_id = song_num.repeat(num_points)
+            song_id = song_id.to_numpy()
+            
+            # timeseries defined as "1 : length(audio_data)"
+            timeseries = np.arange(num_points)
+            timeseries = timeseries.transpose()
+
+            full_index = {'song_id': song_id, 'timeseries': timeseries}
+            index_pdf = pd.DataFrame(full_index)
+            
             spec_pdf = pd.DataFrame(data=log_S, columns=spec_labels)
             
-            #spec_seq.append(spec_pdf)
+            full_spec = pd.concat([index_pdf, spec_pdf], axis=1)
+            
+            spec_df = spark.createDataFrame(full_spec)
             
             
-            
+            ##### write dataframes to psql
+            write_df_to_psql(tag_df, 'clean_metadata')
+            write_df_to_psql(audio_df, 'clean_audio')
+            write_df_to_psql(spec_df, 'clean_spec')
+
             
             
         # stop process when file_limit is crossed (small batches)
@@ -192,11 +218,9 @@ def read_audio_files():
     #####
     
     time_seq.append(['end read-file', time.time()])
-    df_tags = spark.createDataFrame(tag_seq, schema=File_Tags)
-    df_audio = spark.createDataFrame(audio_seq)
-    df_spec = spark.createDataFrame(audio_seq, schema=Spec_Tags)
-    write_df_to_psql(df_tags, 'clean_metadata')
-    write_df_to_psql(df_audio, 'clean_audio')
+    #df_tags = spark.createDataFrame(tag_seq, schema=File_Tags)
+    #df_audio = spark.createDataFrame(audio_seq)
+    #df_spec = spark.createDataFrame(audio_seq, schema=Spec_Tags)
     
     # Additional run to 
     #df_audio_data = spark.createDataFrame(file_audio_data)
