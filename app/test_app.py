@@ -8,6 +8,8 @@ Created on Thu Jun 18 18:54:48 2020
 
 
 # -*- coding: utf-8 -*-
+
+# import packages
 import dash
 import dash_table
 import dash_core_components as dcc
@@ -17,11 +19,14 @@ import psycopg2
 import os
 import pandas as pd
 import numpy as np
+import plotly
 import plotly.express as px
+import plotly.graph_objects as go
 import librosa
 import librosa.display as ld
 import IPython.display as ipd
-
+import pylab as pl
+import boto3
 
 ######
 
@@ -36,7 +41,8 @@ conn = psycopg2.connect(host = 'ec2-13-58-251-142.us-east-2.compute.amazonaws.co
                         password=psql_pw)
 
 
-# read out metadata
+
+##### read out metadata
 metadata = conn.cursor()
 
 metadata.execute("SELECT * FROM clean_metadata WHERE false;")
@@ -52,141 +58,200 @@ cols = ["s3_key", "song_id", "album", "albumartist", "artist",
 
 tag_df = pd.DataFrame(data=md, columns=cols)
 
-audio_fig = px.scatter(x=[0], y=[0])
 
 
-# read out audio data
-audiodata = conn.cursor()
 
-qstring = 'SELECT timeseries,intensity FROM clean_audio WHERE song_id=' + str(1)
-
-audiodata.execute(qstring)
-ad = np.array(audiodata.fetchall())
-audio_df = pd.DataFrame(data=ad, columns=['time', 'I'])
-audio_fig = px.scatter(audio_df, x='time', y='I', title='audio data')
-
-# def load_audio_data(curr_song_id):
-# # read out audio data
-#     audiodata = conn.cursor()
+##### s3 acess for playing audio files
+s3_bucket = 'mdp-spectralize-pal'
+number_of_files = 0
+s3 = boto3.resource('s3')
+bucket = s3.Bucket(s3_bucket)
     
-#     qstring = 'SELECT timeseries,intensity FROM clean_audio WHERE song_id=' + str(curr_song_id)
+# placeholders for callback initialization
+audio_sd_file = './hello.wav'
+standin_data = np.array([[0,0],[0,0]])
+standin_df = pd.DataFrame(standin_data, columns=['x','y'])
+audio_fig = px.line(standin_df, x='x', y='y', title='audio data', render_mode='webgl')
+spec_fig = px.imshow(standin_df)
+
+def load_audio_data(selected_row):
+    # read out audio data
     
-#     audiodata.execute(qstring)
-#     ad = np.array(audiodata.fetchall())
-#     audio_df = pd.DataFrame(data=ad, columns=['time', 'I'])
-#     audio_fig = px.scatter(audio_df, x='time', y='I', title='audio data')
-#     return audio_fig
+    #curr_song_id = tag_df.iloc[selected_row]['song_id']
+    curr_song_id = selected_row
+    
+    audiodata = conn.cursor()
+    
+    qstring = 'SELECT intensity FROM clean_audio WHERE song_id=' + str(curr_song_id)
+    
+    audiodata.execute(qstring)
+    ad = np.array(audiodata.fetchall())
+    
+    audio_df = pd.DataFrame(data=ad, columns=['I'])
+    audio_fig = px.line(audio_df, x=audio_df.index, y='I', title='audio data', render_mode='webgl')
+    audio_fig.update_layout(
+        height=250,
+        margin_r=0,
+        margin_l=0,
+        margin_t=0,
+        yaxis_title='',
+        yaxis_fixedrange=True)
+    
 
-#audiodata.execute("SELECT intensity FROM clean_audio WHERE song_id=1")
-#ad = np.array(audiodata.fetchall())
-#audio_df = pd.DataFrame(data=ad, columns=['I'])
+    #s3_key = tag_df.iloc[curr_song_id]['s3_key']
+    
+    # this_row = tag_df.loc[tag_df['song_id'] == curr_song_id]
+    # s3_key = tag_df.iloc[this_row]['s3_key']
+    
+    # ext = s3_key[-4:]
+    # audio_sd_file = './audio_file' + ext
+    
+    # bucket.download_file(s3_key, audio_sd_file)     
+    
+    return audio_fig#, audio_sd_file
+
+def load_spec_data(selected_row):
+    curr_song_id = selected_row
+    specdata = conn.cursor()
+    qstring = 'SELECT * FROM clean_spec WHERE song_id=' + str(curr_song_id)
+    specdata.execute(qstring)
+    sd = np.array(specdata.fetchall())
+    
+    spec_df = pd.DataFrame(data=sd)
+
+    trim_sd = spec_df.iloc[:,2:]
+    spec_fig = px.imshow(np.flipud(trim_sd.transpose()))
+    spec_fig.update_layout(
+        height=250,
+        margin_r=0,
+        margin_l=0,
+        margin_t=0,
+        yaxis_title='',
+        yaxis_fixedrange=True)
+    
+    return spec_fig
 
 
-#audio_fig = ld.waveplot(audio_df)
-
-
-
+#####
+# initialize Dash app    
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-
 app.layout = html.Div(children=[
+    
+    # header
     html.H1(children='Metadata'),
     
+    # metadata table
     dash_table.DataTable(
-    data=tag_df.to_dict('records'),
-    columns=[{'id': c, 'name': c} for c in tag_df.columns],
-    style_cell={
-        'overflowX': 'auto',
-        'textOverflow': 'ellipsis',
-        'maxWidth': 0,
-        'row_selectable': 'single'
-    },
-    tooltip_data=[
-        {
-            column: {'value': str(value), 'type': 'markdown'}
-            for column, value in row.items()
-        } for row in tag_df.to_dict('rows')
-    ],
-    tooltip_duration=None
+        id = 'metadata_table',
+        data=tag_df.to_dict('rows'),
+        columns=[{'id': c, 'name': c} for c in tag_df.columns],
+        style_cell={
+            'overflowX': 'auto',
+            'textOverflow': 'ellipsis',
+            'maxWidth': 0,
+            'row_selectable': 'single',
+            'font_family': 'Arial',
+            'font_size': '1.5rem',
+            'padding': '.1rem',
+            'backgroundColor': '#f4f4f2'
+            },
+        style_cell_conditional=[
+            {'textAlign': 'center'}
+            ],
+        style_header={
+            'backgroundColor':'#f4f4f2',
+            'fontWeight': 'bold'
+            },
+        style_table={
+            'maxHeight':'500px',
+            'overflowX': 'scroll'
+            },
+        tooltip_data=[
+            {
+                column: {'value': str(value), 'type': 'markdown'}
+                for column, value in row.items()
+            } for row in tag_df.to_dict('rows')
+        ],
+        tooltip_duration=None
+    ),# end table
+    
+    
+    # load audio button
+    html.Br(),
+    
+    html.Div(
+        [
+            dcc.Input(id='input_songnum', value='input song number', type='text'),
+            html.Button('Load audio', 
+                    id='submit-val',
+                    style={'display': 'inline-block'},
+                    n_clicks=0),
+            html.Div(id='song_input')
+         ],
     ),
     
-    html.Div(children='''
-        Audio Data
-        '''),
-    
-    html.Div(dcc.Input(id='input-on-submit', type='text')),
-    html.Button('Submit', id='submit-val', n_clicks=0),
-    html.Div(id='container-button-basic',
-             children='Enter a value and press submit'),
+    html.Br(),
     
     
-    dcc.Graph(
-        id='audio-intensity',
-        figure=audio_fig
-        )
+    # html.Audio(id="player", src=audio_sd_file, controls=True, style={
+    #     "width": "100%"
+    # }),    
+    
+    html.Br(),
+    
+    dcc.Graph(id='waveform', figure=audio_fig),
+    
+    html.Br(),
+
+    dcc.Graph(id='spect', figure=spec_fig)
+            
 ])
+##### finish Dash layout
 
 
+
+##### callbacks
+# load-audio button control
+# @app.callback(
+#     Output('input_songnum', 'value'),
+#     [Input('submit-val', 'n_clicks')]
+#     )
+# def retrieve_audio(value):
+#     return load_audio_data(value)
 
 
 @app.callback(
-    Output('div-out','children'),
-    [Input('datatable', 'rows'),
-     Input('datatable', 'selected_row_indices')])
-def f(rows,selected_row_indices):
-    #either:
-    selected_rows=[rows[i] for i in selected_row_indices]
-    #or
-    #selected_rows=pd.DataFrame(rows).iloc[i] 
-    return selected_rows
-
+    Output('waveform', 'figure'),
+    [Input('submit-val', 'n_clicks')]
+    )
+def update_A_figure(submit_val):
+    audio_fig = load_audio_data(submit_val)
+    return audio_fig
+    
 @app.callback(
-    dash.dependencies.Output('container-button-basic', 'children'),
-    [dash.dependencies.Input('submit-val', 'n_clicks')],
-    [dash.dependencies.State('input-on-submit', 'value')])
-def update_output(value):
-    return load_audio_data(value)
+    Output('spect', 'figure'),
+    [Input('submit-val', 'n_clicks')]
+    )
+def update_S_figure(submit_val):
+    spec_fig = load_spec_data(submit_val)
+    return spec_fig
 
+# @app.callback(
+#     Output('metadata_table', 'derived_virtual_selected_rows'),
+#     [Input('submit-val', 'n_clicks'),
+#      State('metadata_table', 'derived_virtual_selected_rows')]
+#     )
+# def update_audio(n_clicks, derived_virtual_selected_rows):
+#     if derived_virtual_selected_rows is None:
+#         derived_virtual_selected_rows = []
+        
+    
+#     return load_audio_data(derived_virtual_selected_rows)
 
-
-#########
-
-# def generate_table(dataframe, max_rows=10):
-#     return html.Table([
-#         html.Thead(
-#             html.Tr([html.Th(col) for col in dataframe.columns])
-#         ),
-#         html.Tbody([
-#             html.Tr([
-#                 html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
-#             ]) for i in range(min(len(dataframe), max_rows))
-#         ])
-#     ])
-
-
-# external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-# app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
-# app.layout = html.Div(children=[
-#     html.H4(children='File Metadata'),
-#     generate_table(tag_df)
-# ])
-
-
-
-##############
-
-# app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
-# app.layout = dash_table.DataTable(
-#     id='table',
-#     columns=[{"name": i, "id": i} for i in tag_df.columns],
-#     data=tag_df.to_dict('records'),
-# )
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8050, host='127.0.0.1')
+    #app.run_server(debug=True, port=8050, host='127.0.0.1')
+    app.run_server(port=8050, host='127.0.0.1')
     #app.run_server(debug=True, port=80, host='ec2-18-224-114-72.us-east-2.compute.amazonaws.com')
