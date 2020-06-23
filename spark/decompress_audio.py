@@ -178,7 +178,7 @@ def read_audio_files():
             
             
             ##### spectral
-            S = librosa.feature.melspectrogram(y, sr=sr, n_mels=128)
+            S = librosa.feature.melspectrogram(y, sr=sr, n_mels=128, fmax=10000)
             log_S = librosa.power_to_db(S, ref=np.max)
             log_S = log_S.transpose()
             

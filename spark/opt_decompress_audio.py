@@ -16,7 +16,7 @@ import librosa.display
 #import Ipython.display as ipd
 #import matplotlib.pyplot as plt
 from pyspark.sql import *
-#import pyspark.sql.functions as f
+from pyspark.sql.functions import udf
 from pyspark import SparkConf, SparkContext, SQLContext
 import boto3
 from tinytag import TinyTag as tt
@@ -51,11 +51,7 @@ def get_metadata(sfile):
                 "samplerate", "title", "track", "track_total", "year")
     
     
-    spec_labels = []
-    for sn in range(0,128):
-        spec_labels.append('spec' + str(sn+1)) 
-        
-    spec_df_labels = ['song_id','timeseries'] + spec_labels
+
 
     Spec_Tags = Row(spec_df_labels)
 
@@ -136,6 +132,12 @@ def get_ASdata(sfile):
 
     full_index = {'song_id': song_id, 'timeseries': timeseries}
     index_pdf = pd.DataFrame(full_index)
+    
+    spec_labels = []
+    for sn in range(0,128):
+        spec_labels.append('spec' + str(sn+1)) 
+        
+    spec_df_labels = ['song_id','timeseries'] + spec_labels
     
     spec_pdf = pd.DataFrame(data=log_S, columns=spec_labels)
     

@@ -133,8 +133,9 @@ def load_spec_data(selected_row):
     
     spec_df = pd.DataFrame(data=sd)
     
-    # currtitle = tag_df.iloc[curr_song_id]['s3_key']
-    # currdur = tag_df.iloc[curr_song_id]['duration']
+    #currtitle = tag_df.iloc[curr_song_id]['title']
+    #currdur = tag_df.iloc[curr_song_id]['duration']    
+    
 
     # numpts = len(sd)
     
@@ -145,13 +146,18 @@ def load_spec_data(selected_row):
     # rt = timeline.round(0)
 
     trim_sd = spec_df.iloc[:,2:]
-    spec_fig = px.imshow(np.flipud(trim_sd.transpose()))
+    spec_fig = px.imshow(trim_sd.transpose(),
+                         origin='lower',
+                         #title=currtitle,
+                         #x=timeline
+                         )
     spec_fig.update_layout(
         height=250,
         margin_r=0,
         margin_l=0,
         margin_t=0,
-        yaxis_title='frequency',
+        yaxis_title='Frequency',
+        xaxis_title='Time',
         #colorbar.title='power',
         yaxis_fixedrange=True,
         #x=str(rt)
@@ -178,12 +184,13 @@ app.layout = html.Div(children=[
         columns=[{'id': c, 'name': c} for c in tag_df.columns],
         style_cell={
             'overflowX': 'auto',
+            'overflow': 'hidden',
             'textOverflow': 'ellipsis',
-            'maxWidth': 0,
+            'maxWidth': 10,
             'row_selectable': 'single',
             'font_family': 'Arial',
             'font_size': '1.5rem',
-            'padding': '.1rem',
+            'padding': '.5rem',
             'backgroundColor': '#f4f4f2'
             },
         style_cell_conditional=[
@@ -191,7 +198,9 @@ app.layout = html.Div(children=[
             ],
         style_header={
             'backgroundColor':'#f4f4f2',
-            'fontWeight': 'bold'
+            'fontWeight': 'bold',
+            'overflowX': 'auto',
+            'textOverflow': 'ellipsis'
             },
         style_table={
             'maxHeight':'500px',
@@ -203,7 +212,8 @@ app.layout = html.Div(children=[
                 for column, value in row.items()
             } for row in tag_df.to_dict('rows')
         ],
-        tooltip_duration=None
+        tooltip_duration=None,
+        style_as_list_view=True,
     ),# end table
     
     
@@ -212,7 +222,7 @@ app.layout = html.Div(children=[
     
     html.Div(
         [
-            dcc.Input(id='input_songnum', value='input song number', type='text'),
+            dcc.Input(id='input_songnum', value='input song number', type='number'),
             html.Button('Load audio', 
                     id='submit-val',
                     style={'display': 'inline-block'},
