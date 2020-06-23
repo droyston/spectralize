@@ -10,6 +10,7 @@ Created on Thu Jun 18 18:54:48 2020
 # -*- coding: utf-8 -*-
 
 # import packages
+#import dash_player
 import dash
 import dash_table
 import dash_core_components as dcc
@@ -27,6 +28,11 @@ import librosa.display as ld
 import IPython.display as ipd
 import pylab as pl
 import boto3
+#import matplotlib as mpl
+#import matplotlib.pyplot as plt
+#from matplotlib import cm
+#from colorspacious import cspace_converter
+#from collections import OrderedDict
 
 ######
 
@@ -68,10 +74,12 @@ s3 = boto3.resource('s3')
 bucket = s3.Bucket(s3_bucket)
     
 # placeholders for callback initialization
-audio_sd_file = './hello.wav'
+standin_fp = '/home/dylanroyston/Documents/GIT/spectralize/app/hello.wav'
+audio_sd_file = standin_fp
+#audio_rawfile, new_sr = librosa.load(standin_fp, sr=None)
 standin_data = np.array([[0,0],[0,0]])
 standin_df = pd.DataFrame(standin_data, columns=['x','y'])
-audio_fig = px.line(standin_df, x='x', y='y', title='audio data', render_mode='webgl')
+#audio_fig = px.line(standin_df, x='x', y='y', title='audio data', render_mode='webgl')
 spec_fig = px.imshow(standin_df)
 
 def load_audio_data(selected_row):
@@ -80,44 +88,61 @@ def load_audio_data(selected_row):
     #curr_song_id = tag_df.iloc[selected_row]['song_id']
     curr_song_id = selected_row
     
-    audiodata = conn.cursor()
+    # audiodata = conn.cursor()
     
-    qstring = 'SELECT intensity FROM clean_audio WHERE song_id=' + str(curr_song_id)
+    # qstring = 'SELECT intensity FROM clean_audio WHERE song_id=' + str(curr_song_id)
     
-    audiodata.execute(qstring)
-    ad = np.array(audiodata.fetchall())
+    # audiodata.execute(qstring)
+    # ad = np.array(audiodata.fetchall())
     
-    audio_df = pd.DataFrame(data=ad, columns=['I'])
-    audio_fig = px.line(audio_df, x=audio_df.index, y='I', title='audio data', render_mode='webgl')
-    audio_fig.update_layout(
-        height=250,
-        margin_r=0,
-        margin_l=0,
-        margin_t=0,
-        yaxis_title='',
-        yaxis_fixedrange=True)
+    # audio_df = pd.DataFrame(data=ad, columns=['I'])
+    # audio_fig = px.line(audio_df, x=audio_df.index, y='I', title='audio data', render_mode='webgl')
+    # audio_fig.update_layout(
+    #     height=250,
+    #     margin_r=0,
+    #     margin_l=0,
+    #     margin_t=0,
+    #     yaxis_title='',
+    #     yaxis_fixedrange=True)
     
 
-    #s3_key = tag_df.iloc[curr_song_id]['s3_key']
+    s3_key = tag_df.iloc[curr_song_id]['s3_key']
     
-    # this_row = tag_df.loc[tag_df['song_id'] == curr_song_id]
-    # s3_key = tag_df.iloc[this_row]['s3_key']
+    #this_row = tag_df.loc[tag_df['song_id'] == curr_song_id]
+    #s3_key = tag_df.iloc[this_row]['s3_key']
     
-    # ext = s3_key[-4:]
-    # audio_sd_file = './audio_file' + ext
+    ext = s3_key[-4:]
+    audio_sd_file = '/home/dylanroyston/Documents/GIT/spectralize/app/audio_file' + ext
     
-    # bucket.download_file(s3_key, audio_sd_file)     
+    bucket.download_file(s3_key, audio_sd_file)     
     
-    return audio_fig#, audio_sd_file
+    #audio_rawfile = librosa.load(audio_sd_file)
+    
+    
+    
+    return audio_sd_file#, audio_fig
 
 def load_spec_data(selected_row):
+    
     curr_song_id = selected_row
+    
     specdata = conn.cursor()
     qstring = 'SELECT * FROM clean_spec WHERE song_id=' + str(curr_song_id)
     specdata.execute(qstring)
     sd = np.array(specdata.fetchall())
     
     spec_df = pd.DataFrame(data=sd)
+    
+    currtitle = tag_df.iloc[curr_song_id]['s3_key']
+    currdur = tag_df.iloc[curr_song_id]['duration']
+
+    numpts = len(sd)
+    
+    interval = float(currdur) / numpts
+    
+    timeline = np.linspace(0,float(currdur),numpts)
+    
+    rt = timeline.round(0)
 
     trim_sd = spec_df.iloc[:,2:]
     spec_fig = px.imshow(np.flipud(trim_sd.transpose()))
@@ -126,8 +151,12 @@ def load_spec_data(selected_row):
         margin_r=0,
         margin_l=0,
         margin_t=0,
-        yaxis_title='',
-        yaxis_fixedrange=True)
+        yaxis_title='frequency',
+        #colorbar.title='power',
+        yaxis_fixedrange=True,
+        x=str(rt)
+        #title=currtitle
+        )
     
     return spec_fig
 
@@ -198,10 +227,15 @@ app.layout = html.Div(children=[
     # html.Audio(id="player", src=audio_sd_file, controls=True, style={
     #     "width": "100%"
     # }),    
+    # dash_player.DashPlayer(
+    #     id='player',
+    #     url='audio_sd_file',
+    #     controls=True
+    # ),
     
     html.Br(),
     
-    dcc.Graph(id='waveform', figure=audio_fig),
+    #dcc.Graph(id='waveform', figure=audio_fig),
     
     html.Br(),
 
@@ -222,21 +256,56 @@ app.layout = html.Div(children=[
 #     return load_audio_data(value)
 
 
-@app.callback(
-    Output('waveform', 'figure'),
-    [Input('submit-val', 'n_clicks')]
-    )
-def update_A_figure(submit_val):
-    audio_fig = load_audio_data(submit_val)
-    return audio_fig
+# @app.callback(
+#     Output('waveform', 'figure'),
+#     [Input('submit-val', 'n_clicks')]
+#     )
+# def update_A_figure(submit_val):
+#     audio_fig = load_audio_data(submit_val)
+#     return audio_fig
     
+
+## update audio player
+# @app.callback(
+#     Output('player', 'src'),
+#     [Input('submit-val', 'n_clicks')]
+#     )
+# def update_player(submit_val):
+#     audio_sd_file = load_audio_data(submit_val)
+#     return audio_sd_file
+
+
+
+## update spect figure on button click
 @app.callback(
     Output('spect', 'figure'),
-    [Input('submit-val', 'n_clicks')]
+    [Input('submit-val', 'n_clicks'),
+     Input('input_songnum', 'value')]
     )
-def update_S_figure(submit_val):
-    spec_fig = load_spec_data(submit_val)
+def update_S_figure(n_clicks, value):
+    
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    
+    if 'submit-val' in changed_id:
+        spec_fig = load_spec_data(value)
+    
     return spec_fig
+
+
+
+
+
+## combined audiofile/spec update
+# @app.callback(
+#     [Output('player', 'src'),
+#      Output('spect', 'figure')],
+#     [Input('submit-val', 'n_clicks')]
+#     )
+# def update_figures(submit_val):
+#     audio_sd_file = load_audio_data(submit_val)
+#     spec_fig = load_spec_data(submit_val)
+#     return audio_sd_file, spec_fig
+    
 
 # @app.callback(
 #     Output('metadata_table', 'derived_virtual_selected_rows'),
@@ -253,5 +322,5 @@ def update_S_figure(submit_val):
 
 if __name__ == '__main__':
     #app.run_server(debug=True, port=8050, host='127.0.0.1')
-    app.run_server(port=8050, host='127.0.0.1')
+    app.run_server(debug=True, port=8050, host='127.0.0.1')
     #app.run_server(debug=True, port=80, host='ec2-18-224-114-72.us-east-2.compute.amazonaws.com')

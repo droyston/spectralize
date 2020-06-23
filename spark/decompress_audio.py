@@ -17,15 +17,9 @@ from pathlib import Path
 #import matplotlib.pyplot as plt
 from pyspark.sql import *
 import pyspark.sql.functions as f
-from pyspark import SparkConf
-from pyspark import SparkContext
+from pyspark import SparkConf, SparkContext, SQLContext
 import boto3
 from tinytag import TinyTag as tt
-
-#from pyspark.ml.linalg import Vectors
-#from pyspark.ml.linalg import DenseVector
-#from pyspark.ml.linalg import DenseMatrix
-#from pyspark.sql.types import _infer_schema
 
 #from io import BytesIO
 import os
@@ -40,9 +34,9 @@ time_seq = []
 #####
 
 # create local Spark instance (for non-cluster dev)
-# sc = SparkContext('local')
-# spark = SparkSession (sc)
-# spark.conf.set("spark.sql.execution.arrow.enabled", "true")
+sc = SparkContext('local')
+spark = SparkSession (sc)
+spark.conf.set("spark.sql.execution.arrow.enabled", "true")
 
 
 # define Spark config
@@ -123,6 +117,10 @@ def read_audio_files():
             
             number_of_files+=1
             bucket.download_file(s3_key, local_path)
+            
+            #base_df = sc.binaryFiles("s3a://mdp-spectralize-pal/copied-audio/_unsorted/Sylvan Esso - Coffee (Official Audio).mp3") 
+            
+            
                 
             ##### tags
             tags = tt.get(local_path)
