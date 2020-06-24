@@ -22,7 +22,7 @@ Audio data is ubiquitous and valuable.
 
 ### Processing Pipeline
 
-~[Tech stack diagram](./docs/spectralize_techstack.png)
+![Tech stack diagram](./docs/spectralize_techstack.png)
 
 Based on Python.
 
