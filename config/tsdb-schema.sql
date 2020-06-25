@@ -16,5 +16,5 @@ CREATE TABLE "clean_audio"(
 );
 
 SELECT create_hypertable('clean_audio', 'timeseries');
-CREATE INDEX on eeg_analysis (song_id, instr_time DESC);
+CREATE INDEX on clean_audio (song_id, instr_time DESC);
 
