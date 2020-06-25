@@ -53,16 +53,16 @@ def get_metadata(sfile):
     
 
 
-    Spec_Tags = Row(spec_df_labels)
+    #Spec_Tags = Row(spec_df_labels)
 
     #local_path = './local_file.'
     
-    known_ext = [".mp3", ".wav", ".m4a"]
+    #known_ext = [".mp3", ".wav", ".m4a"]
     
-    ext = s3_key[-4:]
+    #ext = s3_key[-4:]
         
     ##### tags
-    tags = tt.get(local_path)
+    tags = tt.get(sfile)
     
     # extract tags from tinytag object
     indiv_tags = (s3_key, number_of_files, tags.album, tags.albumartist, tags.artist, 
@@ -79,9 +79,11 @@ def get_metadata(sfile):
     tag_seq=[]
     tag_seq.append(indiv_tag_list)
     
-    tags_pdf = pd.DataFrame(data=tag_seq)
     
-    tag_df = spark.createDataFrame(tags_pdf, schema=File_Tags)
+    tags_df = pd.DataFrame(data=tag_seq)
+    #tags_pdf = pd.DataFrame(data=tag_seq)
+    
+    #tag_df = spark.createDataFrame(tags_pdf, schema=File_Tags)
     
     return tag_df
 # get metadata
@@ -235,16 +237,39 @@ if __name__ == '__main__':
     # create dataframe of all 
     
     #base_df = sc.binaryFiles("s3a://mdp-spectralize-pal/copied-audio/_unsorted/Sylvan Esso - Coffee (Official Audio).mp3") 
-    df_allbin = []
+    df_allbin = sc.binaryFiles(key_list)
+    
+    
+    
+    
+    # def sort_and_analyze_time_series(l):
+    #     if len(l) < 3687: # ideally this needs to be 4096; 10% tolerance
+    #         return None
+    #     res = sorted(l, key=operator.itemgetter(0))
+    #     time_series = [item[1] for item in res]
+    #     abnormality_indicator = get_delta_ap_en(time_series)
+    #     return abnormality_indicator
+    
+    # analyze_udf = udf(sort_and_analyze_time_series)
+    
+    # df_analyzed = df_windowed.select(
+    # "instr_time",
+    # df_windowed.window.end.alias("ingest_time"),
+    # "subject_id",
+    # "channel",
+    # analyze_udf(df_windowed.time_series).cast(FloatType()).alias("abnormality_indicator"),
+    # "num_datapoints"
+    # )
+    
     
     
     
     def extract_file_data(audiofile):
         
         tag_df = get_metadata(audiofile)
-        audio_df, spec_df = get_ASdata(audiofile)
+        #audio_df, spec_df = get_ASdata(audiofile)
         
-        return tag_df, audio_df, spec_df
+        return tag_df#, audio_df, spec_df
      
     exploded_files_udf = udf(extract_file_data)
     
@@ -261,8 +286,8 @@ if __name__ == '__main__':
     
     ##### write dataframes to psql
     write_df_to_psql(tag_df, 'clean_metadata')
-    write_df_to_psql(audio_df, 'clean_audio')
-    write_df_to_psql(spec_df, 'clean_spec')
+    #write_df_to_psql(audio_df, 'clean_audio')
+    #write_df_to_psql(spec_df, 'clean_spec')
 
         
     time_seq.append(['end read-file', time.time()])
