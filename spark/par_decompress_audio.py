@@ -21,14 +21,20 @@ from pyspark import SparkConf, SparkContext, SQLContext
 import boto3
 from tinytag import TinyTag as tt
 
+
+import soundfile as sf
+import audioread
+from pydub import AudioSegment
+
+
 from io import BytesIO
 
-from pydub import AudioSegment
 
 #from io import BytesIO
 import os
 import sys
 import time
+import struct
 
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/lib")
@@ -115,16 +121,16 @@ def read_audio_files():
             
         audio_obj_stream = boto_client.get_object(Bucket=s3_bucket, Key=s3_key)
         audio_obj = BytesIO(audio_obj_stream['Body'].read())
-        
-        
+                
+        song = bytes(audio_obj)
      
-
         
-        
+        song = sf.SoundFile(audio_obj)
         
         song = open(audio_obj, 'rb').read()
         
-        song = AudioSegment.from_file(audio_obj, format='mp3')
+
+        song = audioread.audio_open(audio_obj)
         
         # extract tags from mp3 files
         #if "mp3" in s3_key:
@@ -141,10 +147,13 @@ def read_audio_files():
         
         
         
+        local_path = '/home/dylanroyston/Music/spectralize_data/01 Konoha Densetsu.mp3'
         
+        
+        song = open(local_path, 'rb').read()
             
         ##### tags
-        #tags = tt.get(local_path)
+        tags = tt.get(local_path)
         tags = tt.get(audio_obj)
         
         # extract tags from tinytag object
