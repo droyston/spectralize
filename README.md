@@ -16,7 +16,7 @@ Decompressing audio files for rapid ML exploration
 
 ## Overview
 
-Audio data is ubiquitous and valuable.
+Audio data is ubiquitous in the modern world, and highly valuable to a wide array of industries and applications. Many companies rely on insights gained from applying machine learning algorithms to various audio datasets. While many such applications are based on defined summary statistics, more recent deep learning approaches rely on processing as many data features as possible. Spectralize is a platform designed to process and decompress common audio files into fully indexed spectral features, enabling rapid use for analysis and ML exploration.
 
 ## Engineering Design
 
@@ -24,27 +24,27 @@ Audio data is ubiquitous and valuable.
 
 ![Tech stack diagram](./docs/spectralize_techstack.png)
 
-Based on Python.
+Spectralize is based on Python, implementing Spark dataframes and transforming data from AWS S3 into indexed PSQL/TimescaleDB tables.
 
-Dependencies
+Core Dependencies
 
-Python libraries
 Anaconda (Python3.7)
 - tinytag: extract metadata tags from audio files
 - librosa: perform audio-processing computations and feature extraction
-- numpy
-- pandas
-- psycopg2
-- boto3
+- pyspark: enable Spark functions
+- numpy: numerical and linear algebra operations
+- pandas: intermediate dataframes
+- psycopg2: psql interaction
+- boto3: AWS S3 interaction
 
 
 ### Processing Logic
 
-The processing log is based on signal processing provided by the [Librosa](https://librosa.org/) library, specifically the Mel-spectrogram decomposition.
+The processing log is based on signal processing provided by the [Librosa](https://librosa.org/) library, specifically the Mel-spectrogram decomposition. Acoustic data is decomposed into human-perceptible frequency-power and stored for easy access and retrieval.
 
 ### Data Source
 
-Assorted audio files were uploaded to S3.
+Assorted audio files were uploaded to S3 (5332 files, ~30GB).
 
 ## Deployment
 
