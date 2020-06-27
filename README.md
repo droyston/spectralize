@@ -24,7 +24,7 @@ Audio data is ubiquitous in the modern world, and highly valuable to a wide arra
 
 ![Tech stack diagram](./docs/spectralize_techstack.png)
 
-Spectralize is based on Python, implementing Spark dataframes and transforming data from AWS S3 into indexed PSQL/TimescaleDB tables.
+Spectralize is based on Python, implementing Spark dataframes and transforming data from AWS S3 into indexed PSQL/TimescaleDB tables, and a web API enabled with Dash (by plotly).
 
 Core Dependencies
 
@@ -36,7 +36,7 @@ Anaconda (Python3.7)
 - pandas: intermediate dataframes
 - psycopg2: psql interaction
 - boto3: AWS S3 interaction
-
+- Dash (plotly): web API
 
 ### Processing Logic
 
@@ -52,10 +52,10 @@ Spectralize was developed and deployed using [Amazon Web Services](https://aws.a
 
 ### EC2 Configuration
 
-Role | Spark | TimescaleDB | Dash
----: | :---: | :---: | :---: 
-**Type** |  m5.large | m5.large | m5.large 
-**Number** | 2 | 5 | 5 
+Role | Spark | PostgreSQL | TimescaleDB | Dash
+---: | :---: | :---: | :---: | :---: 
+**Type** |  m4.large | m4.large | c5x2large | m4.large 
+**Number** | 8 | 1 | 1 | 1
 
 ### Spark
 
@@ -67,9 +67,18 @@ python3.7 -m pip -r config/sparkcluster-requirements.txt
 
 ### PSQL/TimescaleDB
 
+Launch an m4.large instance with AWS and install psql, and configure for remote access
+
+
+Launch an c5.2xlarge instance with Amazon Machine Image (AMI) [provided by Timescale](https://docs.timescale.com/v1.3/getting-started/installation/ami/installation-ubuntu-ami). Then, import the following schema:
+
+```bash
+psql -U postgres -d spectralize -f config/tsdb-schema.sql
+```
 
 ### Dash
 
+Launch an m4.large instance with AWS and install Dash and associated dependencies, and launch app.py
 
 ## Credits
 
